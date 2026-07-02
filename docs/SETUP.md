@@ -12,3 +12,4 @@ This file is safe to commit — no secrets, passwords, or keys ever go here.
   Billing > Account management > Projects linked to this billing account)
 - Trial credit: NZ$530, expires 2 October 2026
 - Currency note: billing shown in NZD, not USD
+- BigQuery API: enabled and confirmed (query editor loads successfully)
