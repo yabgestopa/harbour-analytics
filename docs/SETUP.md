@@ -25,3 +25,17 @@ This file is safe to commit — no secrets, passwords, or keys ever go here.
 - Note: Fivetran's current guidance recommends "Custom connection" as the
   primary auth method for AU/NZ/UK/US orgs, but Web app is still fully
   supported and is what we used here.
+
+  ## Fivetran → BigQuery Sync
+
+- Connection: xero → BigQuery, destination schema "xero"
+- Authentication: Web app (works for NZ org; Fivetran recommends
+  Custom connection as the primary method for AU/NZ/UK/US, but Web app
+  is fully supported — noted as a known, accepted tradeoff)
+- Service account granted: BigQuery User + BigQuery Data Editor
+  (least-privilege, not Editor)
+- First sync: 3 July 2026, successful historical sync, 946 rows loaded
+- Confirmed in BigQuery console: xero dataset with real tables
+  (account, allocation, asset, bank_transaction, etc.) and real rows
+- 2 minor warnings noted (tables excluded, custom connection recommended)
+  — both non-blocking, documented here rather than actioned
