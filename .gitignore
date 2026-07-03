@@ -1,0 +1,16 @@
+# Python virtual environment — local machinery, never shared
+.venv/
+
+# dbt — build artifacts and logs, regenerated every run
+target/
+dbt_packages/
+logs/
+
+# Secrets — NEVER commit these
+*.json
+.env
+profiles.yml
+
+# OS clutter
+.DS_Store
+Thumbs.db
