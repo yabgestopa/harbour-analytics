@@ -1,0 +1,127 @@
+version: 2
+
+models:
+  - name: stg_xero__accounts
+    description: >
+      One row per account in the Xero chart of accounts (62 rows in the demo
+      company). Cleaned and renamed from the raw Fivetran `account` table.
+      Use this to look up what an account is and which financial statement it
+      belongs to. It holds NO balances or amounts: for balances, sum General
+      Ledger lines (fct_general_ledger, once built) and join to this table on
+      account_id. Synonyms: chart of accounts, GL accounts, ledger accounts.
+    config:
+      meta:
+        synonyms: [chart of accounts, gl accounts, ledger accounts, coa]
+        example_questions:
+          - question: Which accounts appear on the Profit & Loss?
+            sql: >
+              select account_code, account_name, account_class
+              from stg_xero__accounts
+              where account_class in ('REVENUE', 'EXPENSE')
+              order by account_code
+    columns:
+      - name: account_id
+        description: >
+          Xero's unique identifier for the account (UUID string). Primary key.
+          Join key for every ledger line, invoice line and journal line.
+          Never null, never duplicated.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: account_code
+        description: >
+          Short code shown in Xero next to the account name, e.g. '200' for
+          Sales, '090' for the main bank account. Stored as a STRING because
+          leading zeros matter. Human-friendly for display and ordering but
+          NOT a key: can be null (some system accounts) and is not guaranteed
+          unique. Join on account_id, not this.
+
+      - name: account_name
+        description: >
+          Display name of the account, e.g. 'Sales', 'Rent', 'Accounts
+          Receivable'. Not unique. Contra accounts are named 'Less ...'
+          (e.g. 'Less Accumulated Depreciation') and carry balances with the
+          opposite sign to their class.
+
+      - name: account_type
+        description: >
+          Xero's detailed account type; the sub-heading within a financial
+          statement. Common values: BANK, CURRENT (current asset), FIXED
+          (fixed asset), INVENTORY, PREPAYMENT, CURRLIAB (current liability),
+          TERMLIAB (long-term liability), EQUITY, REVENUE, SALES, OTHERINCOME,
+          DIRECTCOSTS (cost of sales), EXPENSE, OVERHEADS, DEPRECIATN. More
+          granular than account_class; for P&L vs Balance Sheet use
+          account_class instead.
+
+      - name: account_class
+        description: >
+          Xero's top-level classification, one of exactly five values:
+          ASSET, LIABILITY, EQUITY (Balance Sheet) and REVENUE, EXPENSE
+          (Profit & Loss). This is the column to filter on for "income
+          statement accounts" or "balance sheet accounts". Never null.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE']
+
+      - name: account_status
+        description: >
+          ACTIVE or ARCHIVED. Archived accounts are hidden in Xero but can
+          still hold historical postings, so do NOT filter them out when
+          building balances; only filter for "accounts available today".
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['ACTIVE', 'ARCHIVED']
+
+      - name: description
+        description: >
+          Free-text note entered by the bookkeeper in Xero. Usually null.
+          Descriptive only; never use for filtering.
+
+      - name: system_account
+        description: >
+          Set only for accounts Xero controls itself, e.g. DEBTORS (Accounts
+          Receivable), CREDITORS (Accounts Payable), GST, RETAINEDEARNINGS,
+          BANKCURRENCYGAIN, ROUNDING. Null for ordinary user-created accounts,
+          which is the vast majority. Useful for finding the AR/AP control
+          accounts without relying on names.
+
+      - name: tax_type
+        description: >
+          Default tax treatment applied to lines posted here, as a Xero tax
+          code: e.g. OUTPUT2 (15% GST on sales), INPUT2 (15% GST on
+          purchases), NONE (no GST), EXEMPTOUTPUT. A default only; a
+          transaction can override it. Null on some system accounts.
+
+      - name: currency_code
+        description: >
+          ISO 4217 currency of the account, e.g. NZD. Populated only for
+          BANK-type accounts; null for everything else. The organisation
+          base currency is NZD.
+
+      - name: reporting_code
+        description: >
+          Xero standard report code used to group accounts on Xero's own
+          reports, e.g. 'ASS.CUR.REC'. Null if unassigned. We do not use it
+          for our statements; account_class and account_type drive those.
+
+      - name: reporting_code_name
+        description: Human-readable label for reporting_code. Null when reporting_code is null.
+
+      - name: bank_account_type
+        description: >
+          Kind of bank account, for BANK-type accounts only: BANK,
+          CREDITCARD, or PAYPAL. Null for non-bank accounts.
+
+      - name: updated_at
+        description: >
+          Timestamp (UTC) when the account record was last modified in Xero.
+          Changes to the account setup, NOT to its balance.
+
+      - name: synced_at
+        description: >
+          Timestamp (UTC) when Fivetran last synced this row into BigQuery.
+          Operational metadata for freshness checks; not a business date.

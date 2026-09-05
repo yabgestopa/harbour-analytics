@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: xero
+    description: Raw Xero accounting data, loaded by Fivetran.
+    database: harbour-analytics-501211
+    schema: xero
+    tables:
+      - name: account
+      - name: contact
+      - name: invoice
+      - name: invoice_line_item
+      - name: payment
+      - name: bank_transaction
+      - name: manual_journal
+      - name: manual_journal_line
