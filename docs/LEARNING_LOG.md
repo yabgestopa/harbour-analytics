@@ -231,6 +231,24 @@ follow it. Newest entries at the bottom. Updated at the end of every working ses
   (*IAM & Admin → Quotas → "Query usage per day"*). A budget warns, a quota blocks. Not
   needed yet.
 
+*GitHub*
+- **GitHub only saves files.** Setting up Google Cloud, BigQuery, Xero and Fivetran happened
+  by clicking on their websites, so those settings live on their servers. What's in the repo
+  is the *paperwork*: the commits that updated `docs/SETUP.md` (`f6ed67c`, `1377b1a`,
+  `bae3876`, `9b34d76`, all on 3 July). Like the power company holding the actual
+  connection while you keep the paperwork that proves it's connected.
+- **The README is the book cover.** GitHub shows `README.md` under the file list on the
+  repo's front page. Mine only says "Harbour Analytics", so visitors can't see what works.
+- **Finding my way around github.com:** the **Code** tab shows files. The **"13 commits"**
+  link lists every save point (same as `git log --oneline`). Clicking a commit shows a
+  **diff**: green lines added, red lines removed, like track changes in Word. Inside a file,
+  **History** shows every commit that touched just that file.
+- **GitDiagram** (`gitdiagram.com/<user>/<repo>`) is a real, free tool that draws a diagram
+  from a public repo's file list and README. It's an AI guess, so check it. Never give it a
+  GitHub token. A hand-made Mermaid diagram in the README is better for a portfolio.
+- **Visual review page:** https://claude.ai/artifact/NnZgqdjwdKDjowmdFFNqvh now has a
+  "You are here" route map and a tour of the repo on GitHub.
+
 ---
 
 ## Coming up next
@@ -239,7 +257,8 @@ follow it. Newest entries at the bottom. Updated at the end of every working ses
 3. Run query 3 above to see if Fivetran is still syncing. It may have paused while in Sandbox.
 4. Save `stg_xero__contacts.sql` as a dbt file, document and test it in `_xero__models.yml`,
    then `dbt build -s stg_xero__contacts`.
-5. Remaining staging models: invoice, invoice_line_item, payment, bank_transaction,
+5. Write a proper README (what it is, pipeline diagram in Mermaid, what's working, links to docs).
+6. Remaining staging models: invoice, invoice_line_item, payment, bank_transaction,
    manual_journal, manual_journal_line.
-6. `fct_general_ledger`, then the financial statement marts, then Power BI.
-7. Commit and push.
+7. `fct_general_ledger`, then the financial statement marts, then Power BI.
+8. Commit and push.

@@ -67,6 +67,8 @@ dbt build -s stg_xero__accounts # one model
 
 ## Progress
 
+- **PAUSED since 2026-11-01** while studying for the dbt Analytics Engineering certification in
+  the sibling repo `../dbt-certification`. Pick up from "Coming up next" in the learning log.
 - Full history: `docs/LEARNING_LOG.md`
 - Billing: GCP project linked to an active billing account ("My Billing Account") as of 2026-11-01.
 - Done: GCP + BigQuery, Xero app, Fivetran sync (first sync 2026-07-03), dbt init, `stg_xero__accounts`
