@@ -133,11 +133,113 @@ follow it. Newest entries at the bottom. Updated at the end of every working ses
 - **Free trials end.** BigQuery Sandbox still lets you query for free, but loading new data
   (Fivetran) needs billing. Set a **budget alert** after upgrading so nothing surprises you.
 
+## Session 6 — 1 November 2026: Finding my way around BigQuery, billing, first draft of contacts
+
+**What we did**
+- Tried to see the "real" SQL behind `stg_xero__accounts`. `dbt compile` failed with
+  *"Your default credentials were not found"*: dbt's Google login isn't saved on this laptop.
+  So we filled in the `source()` placeholder by hand and got plain SQL to paste into BigQuery.
+- Got a set of five "where am I?" queries to run in the BigQuery console (saved below).
+- Wrote a first draft of `stg_xero__contacts` directly in BigQuery and reviewed it. It isn't
+  saved as a dbt file yet.
+- Checked billing on the deadline day. The project `harbour-analytics-501211` is linked to
+  **"My Billing Account"**, status **Active**, $0 spent in the last 30 days. Out of Sandbox.
+- Started creating a budget alert: Alerts only, NZD $5/month, emails at 50/90/100%.
+- Made the rules stricter: every chat gets a learning-log entry, and console screens get
+  explained, not just "click here".
+
+**What I learned**
+
+*BigQuery: finding my way around*
+- **BigQuery is a filing cabinet.** The **project** (`harbour-analytics-501211`) is the
+  cabinet. Each **dataset** is a drawer: `xero` holds the raw data Fivetran delivers, and
+  `dbt_dev` holds what dbt builds. Each **table** is a folder in a drawer.
+- **The five "where am I?" queries** (save them in the console with *Save → Save query*):
+  1. *Which drawers exist?* `INFORMATION_SCHEMA.SCHEMATA` lists datasets.
+     `INFORMATION_SCHEMA` is BigQuery's own index card system: tables that describe your tables.
+  2. *What's in the `xero` drawer and how big is it?*
+     `select table_id, row_count, size_bytes, last_modified_time from \`harbour-analytics-501211\`.xero.__TABLES__`
+     gives one row per table with its row count. Empty tables jump out.
+  3. *When did Fivetran last deliver?* `max(_fivetran_synced)` per table. `_fivetran_synced`
+     is the delivery stamp Fivetran puts on every row. An old date means deliveries stopped.
+  4. *Peek inside:* `select * from ... limit 20`. The **Preview** tab in the left panel does
+     the same thing **for free**, because it doesn't run a query.
+  5. *What has dbt built?* `dbt_dev.INFORMATION_SCHEMA.TABLES`.
+- **Backticks** (`` `harbour-analytics-501211`.xero.account ``) wrap a name that has
+  hyphens in it, so BigQuery doesn't read the `-` as a minus sign. It's like putting a
+  long name in quotes so nobody mistakes it for two names.
+- **A view vs a table.** A table stores the data. A **view** is a saved question: every time
+  you open it, it runs the query again on fresh data. Like a saved Google search vs a printout.
+  dbt builds staging models as views.
+- **`limit` doesn't make a query cheaper in BigQuery.** BigQuery charges by how much data it
+  *reads*, and it still reads the whole column first. Preview is the free way to look.
+
+*dbt*
+- **Compiling.** A dbt model has placeholders like `{{ source('xero', 'account') }}` that only
+  dbt understands. *Compiling* swaps them for the real names
+  (`` `harbour-analytics-501211`.`xero`.`account` ``) to make plain SQL. Like a recipe that
+  says "flour from the usual cupboard": dbt knows which cupboard, BigQuery doesn't. After
+  `dbt compile`, the plain SQL is in `transform/target/compiled/...`.
+- **Why dbt couldn't log in.** `profiles.yml` says `method: oauth`, meaning "log in as me, Ru,
+  using my Google account". That needs a saved Google login on the laptop, called
+  *Application Default Credentials*, which is like a key card. It's missing or expired. Fix:
+  `gcloud auth application-default login`, which opens a browser so I can sign in once.
+- **Writing in the console vs writing in dbt.** Testing SQL in BigQuery first is a great way
+  to try things out. But the version that counts is the `.sql` file in `transform/models/`,
+  because that's what's saved in git, tested and rebuilt. Anything only in the console is
+  like a note on a whiteboard: it gets wiped.
+- **Reviewing my contacts draft:**
+  - Use `{{ source('xero', 'contact') }}`, not the hard-coded name (same reason as session 4).
+  - `merged_to_contact_id` belongs under `-- ids`. In Xero, when two duplicate contacts get
+    merged, the old one points to the one it became. Like a "we've moved" sign on an old shop.
+  - True/false columns (`is_supplier`, `is_customer`, `is_deleted`) get their own
+    `-- flags` group, so they're easy to spot.
+  - `_fivetran_deleted` → `is_deleted`: Fivetran doesn't actually remove rows that were
+    deleted in Xero. It marks them, like crossing a name out instead of tearing the page out.
+    In staging we **keep** those rows and just label them. Deciding to hide them comes later.
+  - **Name check:** it's `stg_xero__contacts` with a **double** underscore. The double
+    underscore separates the source from the thing, like the gap between surname and first name.
+
+*Google Cloud billing*
+- **Sandbox vs upgraded.** Sandbox is a library card that only lets you read in the library:
+  queries work, but tables expire after 60 days and Fivetran can't load data. Upgrading
+  means putting a card on file. You still only pay above the free allowance
+  (1 TB of queries + 10 GB of storage each month), and this project is far below that.
+- **"Linked" isn't the same as "active".** A project can be attached to a billing account
+  that's paused after a free trial, like a gym membership card that's still in your wallet
+  but expired. Check **Your billing accounts → Status = Active**.
+- **Health checks (💡)** are Google's suggestions for your account, like a car dashboard light
+  that says "tyre pressure low": not an emergency, worth a look.
+- **Budgets:**
+  - A **budget** is a spending limit you choose so you notice when you're near it, like
+    writing down your pocket-money amount.
+  - **Alerts only vs Spend cap:** an alert is a smoke alarm (it beeps, nothing stops). A spend
+    cap is a sprinkler (it stops the service). Caps only work for some services, so we used
+    alerts, which work everywhere.
+  - **CUDs / provisioned throughput:** ways of paying ahead for a discount, like a yearly bus
+    pass. Not something we use.
+  - **Scope:** which projects and services the budget watches. Only `harbour-analytics`,
+    so other projects don't muddy the numbers.
+  - **Thresholds 50/90/100%:** emails at $2.50, $4.50 and $5. Several warnings work like a
+    fuel gauge that warns you at half a tank and again near empty, not only once you've run out.
+  - **Actual vs Forecasted:** *Actual* = already spent. *Forecasted* = Google's guess for the
+    end of the month. Normal spend is $0, so **any** alert email means something unusual is
+    running.
+  - **Billing admins:** the people allowed to manage billing. That's just me, so emails go
+    to my Gmail.
+- **Quotas** are hard limits on one thing, like the maximum data BigQuery may scan per day
+  (*IAM & Admin → Quotas → "Query usage per day"*). A budget warns, a quota blocks. Not
+  needed yet.
+
 ---
 
 ## Coming up next
-1. Upgrade GCP billing (before 1 Nov 2026) and set a budget alert.
-2. Finish the Google login, then `dbt debug` and `dbt build` to prove the rebuild works.
-3. Staging models for the rest of the sources: contact, invoice, invoice_line_item, payment,
-   bank_transaction, manual_journal, manual_journal_line.
-4. `fct_general_ledger`, then the financial statement marts, then Power BI.
+1. Finish the budget alert if it isn't saved yet. Check the Sandbox banner is gone in BigQuery.
+2. Fix dbt's login: `gcloud auth application-default login`, then `dbt debug`.
+3. Run query 3 above to see if Fivetran is still syncing. It may have paused while in Sandbox.
+4. Save `stg_xero__contacts.sql` as a dbt file, document and test it in `_xero__models.yml`,
+   then `dbt build -s stg_xero__contacts`.
+5. Remaining staging models: invoice, invoice_line_item, payment, bank_transaction,
+   manual_journal, manual_journal_line.
+6. `fct_general_ledger`, then the financial statement marts, then Power BI.
+7. Commit and push.
